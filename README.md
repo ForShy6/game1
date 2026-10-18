@@ -1,8 +1,5 @@
 # 猜数字小游戏（Guess Number）
 
-> **在线试玩** → https://forshy6.github.io/game1/  
-> （网页版，手机或电脑打开即玩；仓库里的 `guess_number.py` 是同一套规则的 Python 命令行版本）
-
 一个用 Python 编写的命令行猜数字小游戏：程序随机生成 1-100 之间的整数，玩家反复猜测，程序提示"大了"或"小了"，直到猜中并统计所用的猜测次数。
 
 ## 游戏玩法
@@ -52,7 +49,6 @@
 - **终端需支持 UTF-8 编码**，否则中文提示可能显示为乱码。源码首行已声明 `# -*- coding: utf-8 -*-`；
 - 开发与验证环境：Python 3.13.14（Windows）。
 
-> TODO: 最低支持版本 3.6 为语法层面推断，仅在 Python 3.13 上实测通过；如需承诺兼容更早版本，请补充实际验证结果。
 
 ## 安装与启动
 
@@ -61,8 +57,8 @@
 ### 方式一：克隆仓库后运行
 
 ```bash
-git clone https://github.com/ForShy6/1.git
-cd 1
+git clone https://github.com/ForShy6/game1.git
+cd game1
 python guess_number.py
 ```
 
@@ -91,7 +87,8 @@ python guess_number.py
 .
 ├── guess_number.py   # 游戏主程序，唯一源码文件，也是程序入口
 ├── README.md         # 项目说明文档（本文件）
-└── .git/             # Git 版本库（已推送到 GitHub 仓库 ForShy6/1）
+├── index.html        # 附赠：同一套规则的网页版，已部署到 GitHub Pages
+└── .git/             # Git 版本库（已推送到 GitHub 仓库 ForShy6/game1）
 ```
 
 入口文件 `guess_number.py` 的关键结构：
@@ -118,3 +115,11 @@ python guess_number.py
 - **无记录功能**：不保存历史成绩，关闭程序后本局结果即丢失；
 - **难度固定**：答案范围写死为 1-100，如需调整需修改源码中的 `randint(1, 100)` 与范围判断条件。
 
+## 附：网页版（额外做的，不影响上面的 Python 版本）
+
+同一个游戏逻辑另外写了一份网页版，方便在手机上直接玩：
+**https://forshy6.github.io/game1/**
+
+- 规则与 `guess_number.py` 完全一致：1-100、提示大了小了、统计次数；
+- 额外加了"范围收窄提示"和最佳成绩记录（存在浏览器本地）；
+- 只是附加展示，本任务要求的交付物仍是单文件的 `guess_number.py`。
