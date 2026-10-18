@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>猜数字小游戏 · Shy</title>
+<meta name="description" content="一个用 HTML/CSS/JS 写的猜数字小游戏：想一个 1-100 的整数，看你能几次猜中。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b82a0'/%3E%3Ctext x='16' y='23' font-size='17' font-family='sans-serif' font-weight='700' fill='%23fff' text-anchor='middle'%3E%3F%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#f5f3ef; --card:#fff; --line:#d8d0c2; --soft:#ece9e2;
+    --text:#26221c; --muted:#6f6a5e;
+    --accent:#3b82a0; --accent2:#7c6aa9; --good:#2f7d32; --bad:#c0392b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    min-height:100dvh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; padding:24px 18px;
+    background:var(--bg); color:var(--text); line-height:1.7;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    -webkit-text-size-adjust:100%;
+  }
+  .app{
+    width:100%; max-width:440px; background:var(--card);
+    border:1px solid var(--line); border-radius:18px; padding:26px 22px 22px;
+  }
+  .head{text-align:center; margin-bottom:18px}
+  .head h1{font-size:1.5rem; letter-spacing:1px}
+  .head h1 span{color:var(--accent)}
+  .head p{color:var(--muted); font-size:.9rem; margin-top:4px}
+  .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px}
+  .stat{background:var(--soft); border-radius:12px; padding:10px 6px; text-align:center}
+  .stat b{display:block; font-size:1.25rem; color:var(--accent); line-height:1.2}
+  .stat small{font-size:.72rem; color:var(--muted)}
+  .log{
+    min-height:150px; max-height:230px; overflow-y:auto;
+    background:#fdfcf9; border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; font-size:.92rem; margin-bottom:14px;
+  }
+  .log .line{padding:2px 0}
+  .log .hint{color:var(--accent)}
+  .log .ok{color:var(--good); font-weight:600}
+  .log .warn{color:var(--bad)}
+  .log .muted{color:var(--muted)}
+  .input-row{display:flex; gap:8px}
+  input[type=number]{
+    flex:1; min-width:0; padding:12px 14px; font-size:1rem;
+    border:1px solid var(--line); border-radius:12px; background:#fff;
+    color:var(--text); outline:none; font-family:inherit;
+    -moz-appearance:textfield;
+  }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(59,130,160,.15)}
+  button{
+    border:none; border-radius:12px; padding:12px 22px; font-size:1rem;
+    font-weight:600; cursor:pointer; color:#fff; font-family:inherit;
+    background:var(--accent); transition:transform .15s, opacity .2s;
+  }
+  button:active{transform:scale(.97)}
+  button.ghost{background:#fff; color:var(--text); border:1px solid var(--line); font-weight:400}
+  button.ghost:hover{border-color:var(--accent)}
+  .actions{display:flex; gap:8px; margin-top:12px}
+  .actions button{flex:1}
+  .tips{font-size:.78rem; color:var(--muted); text-align:center; margin-top:14px}
+  .flash{animation:flash .4s}
+  @keyframes flash{0%,100%{background:#fdfcf9}50%{background:#eef4f6}}
+  @media(prefers-reduced-motion:reduce){ .flash{animation:none} button{transition:none} }
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="head">
+    <h1>猜<span>数字</span></h1>
+    <p>我心里想了一个 1 到 100 的整数，你几次能猜中？</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="count">0</b><small>已猜次数</small></div>
+    <div class="stat"><b id="range">1-100</b><small>范围</small></div>
+    <div class="stat"><b id="best">--</b><small>最佳记录</small></div>
+  </div>
+
+  <div class="log" id="log" role="log" aria-live="polite" aria-label="猜测记录"></div>
+
+  <div class="input-row">
+    <input id="guess" type="number" inputmode="numeric" min="1" max="100"
+           placeholder="输入 1-100 的整数" aria-label="输入你猜的数字" autocomplete="off">
+    <button id="submit">猜</button>
+  </div>
+  <div class="actions">
+    <button class="ghost" id="restart">重新开一局</button>
+  </div>
+
+  <p class="tips">按回车也能提交 · 记录会存在你自己的浏览器里</p>
+</main>
+
+<script>
+(function(){
+  const logEl = document.getElementById('log');
+  const input = document.getElementById('guess');
+  const countEl = document.getElementById('count');
+  const rangeEl = document.getElementById('range');
+  const bestEl = document.getElementById('best');
+
+  let answer = 0, count = 0, started = false;
+  let low = 1, high = 100;
+  let best = null;
+  try { best = JSON.parse(localStorage.getItem('guess-best') || 'null'); } catch(e){}
+
+  function say(text, cls){
+    const line = document.createElement('div');
+    line.className = 'line' + (cls ? ' ' + cls : '');
+    line.textContent = text;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function paintBest(){
+    bestEl.textContent = best ? best + ' 次' : '--';
+  }
+
+  function newGame(){
+    answer = Math.floor(Math.random() * 100) + 1;
+    count = 0; low = 1; high = 100; started = true;
+    countEl.textContent = '0';
+    rangeEl.textContent = '1-100';
+    logEl.innerHTML = '';
+    say('新的一局开始了，我开始想数字了。', 'muted');
+    say('提示：每次猜完我会告诉你「大了」还是「小了」。', 'hint');
+    paintBest();
+    input.value = '';
+    input.focus();
+  }
+
+  function submit(){
+    const raw = input.value.trim();
+    if(raw === ''){ say('先输入一个数字再猜吧。', 'warn'); return; }
+    const n = Number(raw);
+    if(!Number.isInteger(n) || n < 1 || n > 100){
+      say('只能猜 1 到 100 之间的整数哦，这次不算。', 'warn');
+      input.select();
+      return;
+    }
+
+    count++;
+    countEl.textContent = count;
+    logEl.classList.remove('flash');
+    void logEl.offsetWidth;
+    logEl.classList.add('flash');
+    input.value = '';
+
+    if(n > answer){
+      high = Math.min(high, n - 1);
+      say('第 ' + count + ' 次：' + n + ' —— 大了，往小猜。', 'hint');
+    } else if(n < answer){
+      low = Math.max(low, n + 1);
+      say('第 ' + count + ' 次：' + n + ' —— 小了，往大猜。', 'hint');
+    } else {
+      say('第 ' + count + ' 次：' + n + ' —— 猜对了！答案就是 ' + answer + '。', 'ok');
+      let title = '';
+      if(count === 1) title = '一击命中，运气爆表。';
+      else if(count <= 5) title = '很准，这波手感不错。';
+      else if(count <= 7) title = '标准水平，二分法大概就是 7 次。';
+      else title = '猜中就行，下次试试每次砍一半。';
+      say(title, 'ok');
+      if(!best || count < best){
+        best = count;
+        try { localStorage.setItem('guess-best', JSON.stringify(best)); } catch(e){}
+        say('刷新了最佳记录！', 'ok');
+      }
+      paintBest();
+      started = false;
+      say('点「重新开一局」再来一次。', 'muted');
+      return;
+    }
+
+    if(low === high){
+      say('现在只剩 ' + low + ' 这一个数了，直接猜它。', 'muted');
+    } else {
+      say('提示：现在范围缩小到 ' + low + ' ~ ' + high + ' 了。', 'muted');
+    }
+    rangeEl.textContent = low + '-' + high;
+    input.focus();
+  }
+
+  document.getElementById('submit').addEventListener('click', submit);
+  document.getElementById('restart').addEventListener('click', newGame);
+  input.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); submit(); }
+  });
+
+  newGame();
+})();
+</script>
+</body>
+</html>
